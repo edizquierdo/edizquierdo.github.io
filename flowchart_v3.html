@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rose-Hulman ECE Curriculum Map</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #050912;
+  --glass:    rgba(8,15,30,0.94);
+  --border:   rgba(80,160,255,0.14);
+  --text:     #c8dcf5;
+  --dim:      rgba(140,175,220,0.48);
+  --btn:      rgba(11,20,38,0.9);
+  --btnbr:    rgba(80,160,255,0.17);
+  --hover:    rgba(80,140,255,0.16);
+  --abg:      rgba(34,211,238,0.11);
+  --abr:      rgba(34,211,238,0.44);
+  --acol:     #22d3ee;
+}
+[data-theme="light"] {
+  --bg:       #edf2f9;
+  --glass:    rgba(248,251,255,0.97);
+  --border:   rgba(100,140,210,0.2);
+  --text:     #1c2d4a;
+  --dim:      rgba(70,100,145,0.58);
+  --btn:      rgba(255,255,255,0.96);
+  --btnbr:    rgba(100,140,210,0.22);
+  --hover:    rgba(100,140,210,0.1);
+  --abg:      rgba(0,155,180,0.09);
+  --abr:      rgba(0,155,180,0.42);
+  --acol:     #007a8c;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--bg);color:var(--text);font-family:'Open Sans',sans-serif;transition:background .3s,color .3s;}
+
+/* ── Header ── */
+#hdr{
+  position:fixed;top:0;left:0;right:0;z-index:300;height:50px;padding:0 16px;
+  background:var(--glass);border-bottom:1px solid var(--border);
+  backdrop-filter:blur(14px);display:flex;align-items:center;gap:12px;
+  transition:background .3s,border-color .3s;
+}
+#title h1{font-family:'Open Sans',sans-serif;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--acol);line-height:1.3;font-weight:700;}
+#title p{font-size:9.5px;color:var(--dim);}
+.sep{width:1px;height:20px;background:var(--border);flex-shrink:0;}
+
+/* ── Tabs ── */
+.tabs{display:flex;gap:3px;}
+.tab{
+  padding:4px 12px;font-family:'Open Sans',sans-serif;font-size:9.5px;letter-spacing:.03em;
+  background:var(--btn);border:1px solid var(--btnbr);border-radius:4px;
+  color:var(--dim);cursor:pointer;user-select:none;transition:all .18s;
+}
+.tab:hover{background:var(--hover);color:var(--text);}
+.tab.on{background:var(--abg);border-color:var(--abr);color:var(--acol);}
+
+/* ── Legend ── */
+#legend-wrap{display:flex;align-items:center;gap:11px;flex-wrap:wrap;}
+.leg{display:flex;align-items:center;gap:5px;font-size:9.5px;color:var(--dim);cursor:pointer;user-select:none;transition:color .18s,opacity .18s;}
+.leg:hover{color:var(--text);}
+.leg.off{opacity:.28;}
+.leg-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0;}
+.leg-static{display:flex;align-items:center;gap:5px;font-size:9.5px;color:var(--dim);user-select:none;}
+.leg-line{width:20px;height:2.5px;border-radius:2px;flex-shrink:0;}
+
+/* ── Theme btn ── */
+#tbtn{
+  margin-left:auto;flex-shrink:0;width:30px;height:30px;
+  background:var(--btn);border:1px solid var(--btnbr);border-radius:6px;
+  cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;
+  color:var(--text);transition:all .18s;
+}
+#tbtn:hover{background:var(--hover);}
+
+/* ── Zoom controls ── */
+#zctrl{position:fixed;bottom:20px;right:20px;z-index:200;display:flex;flex-direction:column;gap:5px;}
+.zc{
+  width:30px;height:30px;background:var(--glass);border:1px solid var(--border);
+  border-radius:6px;color:var(--text);font-size:14px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;backdrop-filter:blur(8px);transition:all .18s;
+}
+.zc:hover{background:var(--hover);}
+
+/* ── Info panel ── */
+#info{
+  position:fixed;bottom:20px;left:20px;z-index:200;width:248px;
+  background:var(--glass);border:1px solid var(--border);
+  border-radius:10px;padding:13px 14px;pointer-events:none;
+  opacity:0;transform:translateY(10px);transition:opacity .18s,transform .18s;
+  backdrop-filter:blur(12px);
+}
+#info.show{opacity:1;transform:translateY(0);}
+#i-id{font-family:'Open Sans',sans-serif;font-size:12px;font-weight:700;margin-bottom:2px;}
+#i-name{font-size:12.5px;font-weight:600;margin-bottom:4px;}
+#i-badge-wrap{margin-bottom:5px;}
+.i-badge{display:inline-block;font-size:8.5px;font-family:'Open Sans',sans-serif;padding:2px 7px;border-radius:3px;}
+#i-credits{font-size:9.5px;color:var(--dim);margin-bottom:5px;}
+#i-desc{font-size:10.5px;color:var(--dim);line-height:1.55;margin-bottom:8px;}
+.i-sec{font-size:8.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);margin-bottom:4px;}
+.i-tags{display:flex;flex-wrap:wrap;gap:4px;}
+.i-tag{font-size:8.5px;font-family:'Open Sans',sans-serif;padding:2px 6px;border-radius:3px;background:rgba(80,140,255,.07);border:1px solid rgba(80,140,255,.2);}
+
+/* ── Hint ── */
+#hint{position:fixed;top:58px;left:50%;transform:translateX(-50%);font-size:9.5px;color:var(--dim);z-index:100;pointer-events:none;transition:opacity .6s;white-space:nowrap;}
+
+/* ── Claude badge ── */
+#claude-badge{
+  position:fixed;bottom:20px;right:64px;z-index:200;
+  display:flex;align-items:center;gap:7px;
+  background:var(--glass);border:1px solid var(--border);
+  border-radius:8px;padding:6px 11px;
+  backdrop-filter:blur(8px);
+  font-size:9px;color:var(--dim);
+  text-decoration:none;
+  white-space:nowrap;
+}
+#claude-badge .cl-icon{flex-shrink:0;}
+
+svg#svg{display:block;position:fixed;top:50px;left:0;right:0;bottom:0;}
+</style>
+</head>
+<body>
+
+<div id="hdr">
+  <div id="title">
+    <h1>Rose-Hulman · ECE Curriculum</h1>
+    <p>Prerequisite dependency graph</p>
+  </div>
+  <div class="sep"></div>
+  <div class="tabs">
+    <button class="tab on" onclick="setMajor('both')">Both</button>
+    <button class="tab"    onclick="setMajor('cpe')">CpE</button>
+    <button class="tab"    onclick="setMajor('ee')">EE</button>
+  </div>
+  <div class="sep"></div>
+  <div id="legend-wrap"><!-- filled by updateLegend() --></div>
+  <button id="tbtn" onclick="toggleTheme()" title="Toggle light / dark">🌙</button>
+</div>
+
+<div id="hint">Scroll to zoom · Drag to pan · Hover a course to trace dependencies</div>
+
+<div id="info">
+  <div id="i-id"></div>
+  <div id="i-name"></div>
+  <div id="i-badge-wrap"></div>
+  <div id="i-credits"></div>
+  <div id="i-desc"></div>
+  <div id="i-pre-wrap" style="display:none">
+    <div class="i-sec">Prerequisites</div>
+    <div class="i-tags" id="i-prereqs"></div>
+  </div>
+</div>
+
+<!-- Claude attribution badge -->
+<a id="claude-badge" href="https://claude.ai" target="_blank" title="Made with Claude by Anthropic">
+  <svg class="cl-icon" width="18" height="18" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- Anthropic-style simplified Claude logomark: radiating lines from center -->
+    <circle cx="24" cy="24" r="10" fill="none" stroke="#d97706" stroke-width="3"/>
+    <line x1="24" y1="4"  x2="24" y2="12" stroke="#d97706" stroke-width="3" stroke-linecap="round"/>
+    <line x1="24" y1="36" x2="24" y2="44" stroke="#d97706" stroke-width="3" stroke-linecap="round"/>
+    <line x1="4"  y1="24" x2="12" y2="24" stroke="#d97706" stroke-width="3" stroke-linecap="round"/>
+    <line x1="36" y1="24" x2="44" y2="24" stroke="#d97706" stroke-width="3" stroke-linecap="round"/>
+    <line x1="9.4"  y1="9.4"  x2="15.1" y2="15.1" stroke="#d97706" stroke-width="3" stroke-linecap="round"/>
+    <line x1="32.9" y1="32.9" x2="38.6" y2="38.6" stroke="#d97706" stroke-width="3" stroke-linecap="round"/>
+    <line x1="38.6" y1="9.4"  x2="32.9" y2="15.1" stroke="#d97706" stroke-width="3" stroke-linecap="round"/>
+    <line x1="15.1" y1="32.9" x2="9.4"  y2="38.6" stroke="#d97706" stroke-width="3" stroke-linecap="round"/>
+  </svg>
+  <span style="font-family:'Open Sans',sans-serif;letter-spacing:.04em;">Made with <strong style="color:#d97706;">Claude</strong></span>
+</a>
+
+<div id="zctrl">
+  <div class="zc" onclick="zoomBy(1.3)">+</div>
+  <div class="zc" onclick="zoomBy(.77)">−</div>
+  <div class="zc" onclick="resetView()" style="font-size:11px">⌂</div>
+</div>
+
+<svg id="svg"></svg>
+
+<script>
+/* ══════════════════════════════════════════
+   PALETTE
+══════════════════════════════════════════ */
+// Dark mode: light, vivid — pop against dark background
+const CAT_COL_D = {
+  math:'#67e8f9', phys:'#6ee7b7', ece:'#fde68a', cs:'#c4b5fd', design:'#fda4af'
+};
+// Light mode: deep, saturated — pop against light background
+const CAT_COL_L = {
+  math:'#0369a1', phys:'#047857', ece:'#b45309', cs:'#6d28d9', design:'#be123c'
+};
+const MAJ_COL_D = {
+  shared:'#86efac', ee:'#93c5fd', cpe:'#fdba74'
+};
+const MAJ_COL_L = {
+  shared:'#166534', ee:'#1e40af', cpe:'#9a3412'
+};
+let CAT_COL = CAT_COL_D;
+let MAJ_COL = MAJ_COL_D;
+
+function catBg(cat, dark){
+  if(dark){
+    return ({
+      math:'rgba(103,232,249,.32)', phys:'rgba(110,231,183,.32)',
+      ece:'rgba(253,230,138,.32)', cs:'rgba(196,181,253,.32)', design:'rgba(253,164,175,.32)'
+    })[cat] || 'rgba(200,200,200,.18)';
+  } else {
+    return ({
+      math:'rgba(3,105,161,.20)',  phys:'rgba(4,120,87,.20)',
+      ece:'rgba(180,83,9,.20)',    cs:'rgba(109,40,217,.20)', design:'rgba(190,18,60,.20)'
+    })[cat] || 'rgba(100,100,100,.12)';
+  }
+}
+function majBg(key, dark){
+  if(dark){
+    return ({shared:'rgba(134,239,172,.32)',ee:'rgba(147,197,253,.32)',cpe:'rgba(253,186,116,.32)'})[key];
+  } else {
+    return ({shared:'rgba(22,101,52,.18)',  ee:'rgba(30,64,175,.18)',  cpe:'rgba(154,52,18,.18)'})[key];
+  }
+}
+function majKey(m){ return m.length===2?'shared':m[0]==='ee'?'ee':'cpe'; }
+function edgeMajKey(ms){ return ms.length===2?'shared':ms[0]==='ee'?'ee':'cpe'; }
+
+/* ══════════════════════════════════════════
+   COURSE DATA
+   m: ['cpe','ee'] = shared, ['cpe'] = CpE only, ['ee'] = EE only
+══════════════════════════════════════════ */
+const COURSES = [
+  // Math
+  {id:'MA111', name:'Calculus I',          cr:5, cat:'math',   m:['cpe','ee'], desc:'Limits, derivatives, and integrals of single-variable functions.'},
+  {id:'MA112', name:'Calculus II',         cr:5, cat:'math',   m:['cpe','ee'], desc:'Integration techniques, sequences, series, and parametric equations.'},
+  {id:'MA113', name:'Calculus III',        cr:5, cat:'math',   m:['cpe','ee'], desc:'Multivariable calculus: partial derivatives and multiple integrals.'},
+  {id:'MA221', name:'Diff Equations I',    cr:4, cat:'math',   m:['cpe','ee'], desc:'First and second-order ODEs, Laplace transforms, and applications.'},
+  {id:'MA222', name:'Diff Equations II',   cr:4, cat:'math',   m:['cpe','ee'], desc:'Systems of ODEs, power series solutions, and Fourier series.'},
+  {id:'MA374', name:'Combinatorics',       cr:4, cat:'math',   m:['cpe'],      desc:'Counting, graph theory, and discrete mathematics. (CpE only)'},
+  {id:'MA381', name:'Intro Probability',   cr:4, cat:'math',   m:['cpe','ee'], desc:'Probability theory, random variables, expectation, and distributions.'},
+  // Physics
+  {id:'PH111', name:'Physics I',           cr:4, cat:'phys',   m:['cpe','ee'], desc:'Mechanics: kinematics, Newton\'s laws, energy, and momentum.'},
+  {id:'PH112', name:'Physics II',          cr:4, cat:'phys',   m:['cpe','ee'], desc:'Electricity and magnetism: electrostatics, circuits, magnetic fields.'},
+  {id:'PH113', name:'Physics III',         cr:4, cat:'phys',   m:['cpe','ee'], desc:'Waves, optics, and an introduction to modern physics.'},
+  // ECE — shared
+  {id:'ECE160', name:'Engr Practice',        cr:2, cat:'ece', m:['cpe','ee'], desc:'Lab skills: soldering, oscilloscopes, bench instruments, and safety.'},
+  {id:'ECE180', name:'Intro Signal Proc',    cr:4, cat:'ece', m:['cpe','ee'], desc:'Introduction to signals, sampling, and spectral analysis.'},
+  {id:'ECE203', name:'DC Circuits',          cr:4, cat:'ece', m:['cpe','ee'], desc:'Resistive circuits, Kirchhoff\'s laws, nodal and mesh analysis.'},
+  {id:'ECE204', name:'AC Circuits',          cr:4, cat:'ece', m:['cpe','ee'], desc:'Phasors, impedance, AC power, and frequency-domain analysis.'},
+  {id:'ECE205', name:'Circuits & Systems',   cr:4, cat:'ece', m:['cpe','ee'], desc:'Laplace-domain analysis, two-port networks, and active filters.'},
+  {id:'ECE230', name:'Intro Embedded Sys',   cr:4, cat:'ece', m:['cpe','ee'], desc:'Microcontroller architecture, peripherals, interrupts, and I/O drivers.'},
+  {id:'ECE233', name:'Intro Digital Sys',    cr:4, cat:'ece', m:['cpe','ee'], desc:'Boolean algebra, combinational logic, flip-flops, and FSMs.'},
+  {id:'ECE250', name:'Electronic Dev Mod',   cr:4, cat:'ece', m:['cpe','ee'], desc:'Diodes, BJTs, MOSFETs: large- and small-signal models and amplifiers.'},
+  {id:'ECE300', name:'CT Sigs & Systems',    cr:4, cat:'ece', m:['cpe','ee'], desc:'Continuous-time Fourier analysis, LTI systems, and system theory.'},
+  // ECE362 prereqs verified from both PDFs: ECE204, ECE205, ECE230, ECE233, ECE250, ECE300 (identical in CpE & EE)
+  {id:'ECE362', name:'Principles of Design', cr:3, cat:'ece', m:['cpe','ee'], desc:'Design methodology, project planning, engineering ethics, and documentation.'},
+  {id:'ECE380', name:'DT Sigs & Systems',    cr:4, cat:'ece', m:['cpe','ee'], desc:'Discrete-time signals, Z-transform, digital filters, and DSP basics.'},
+  // ECE — CpE only
+  {id:'ECE312', name:'Comm Networks',        cr:4, cat:'ece', m:['cpe'], desc:'Data communications, network protocols, and internet fundamentals.'},
+  {id:'ECE332', name:'Computer Arch II',     cr:4, cat:'ece', m:['cpe'], desc:'Pipelining, cache memory hierarchy, and advanced processor design.'},
+  {id:'ECE343', name:'High-Speed Dig Des',   cr:4, cat:'ece', m:['cpe'], desc:'Transmission lines, signal integrity, timing, and high-speed PCB design.'},
+  // ECE — EE only
+  {id:'ECE310', name:'Comm Systems',         cr:4, cat:'ece', m:['ee'], desc:'Analog and digital communication theory and modulation techniques.'},
+  {id:'ECE320', name:'Lin Control Systems',  cr:4, cat:'ece', m:['ee'], desc:'Feedback control, stability analysis, root locus, and Bode plots.'},
+  {id:'ECE340', name:'Emag Fields',          cr:4, cat:'ece', m:['ee'], desc:'Electrostatics, magnetostatics, and boundary-value problems.'},
+  {id:'ECE341', name:'Emag Waves',           cr:4, cat:'ece', m:['ee'], desc:'Wave propagation, transmission lines, and antenna fundamentals.'},
+  {id:'ECE351', name:'Analog Electronics',   cr:4, cat:'ece', m:['ee'], desc:'Op-amp circuits, feedback amplifiers, and analog IC design.'},
+  {id:'ECE370', name:'Energy Systems',       cr:4, cat:'ece', m:['ee'], desc:'Electric machines, power electronics, and energy conversion systems.'},
+  // Design capstone — shared
+  {id:'ECE460', name:'Engr Design I',        cr:3, cat:'design', m:['cpe','ee'], desc:'Senior capstone: project definition, requirements, and team planning.'},
+  {id:'ECE461', name:'Engr Design II',       cr:4, cat:'design', m:['cpe','ee'], desc:'Senior capstone: design, build, and iterative prototype testing.'},
+  {id:'ECE462', name:'Engr Design III',      cr:2, cat:'design', m:['cpe','ee'], desc:'Senior capstone finale: system integration, demo, and final report.'},
+  // CS — shared
+  {id:'CSSE120', name:'Intro Soft Devel',    cr:4, cat:'cs', m:['cpe','ee'], desc:'Introduction to programming: Python, algorithms, and problem-solving.'},
+  {id:'CSSE220', name:'OO Soft Devel',       cr:4, cat:'cs', m:['cpe','ee'], desc:'Object-oriented design and programming in Java.'},
+  // CS — CpE only
+  {id:'CSSE230', name:'Data Structures',     cr:4, cat:'cs', m:['cpe'], desc:'Lists, trees, graphs, sorting, and algorithm complexity analysis.'},
+  {id:'CSSE232', name:'Computer Arch I',     cr:4, cat:'cs', m:['cpe'], desc:'ISA, assembly programming, datapath, and control unit design.'},
+  {id:'CSSE332', name:'Operating Systems',   cr:4, cat:'cs', m:['cpe'], desc:'Processes, scheduling, memory management, and file systems.'},
+];
+
+/*
+  EDGE FORMAT: [src, tgt, majors[]]
+  ─────────────────────────────────────────────────────────────
+  Verified against both PDFs (V18 Rev1.1 / Rev11, Dec 5 2023):
+
+  ECE362 prereqs (IDENTICAL in both CpE and EE):
+    ECE204, ECE205, ECE230, ECE233, ECE250, ECE300
+
+  CpE ECE460 prereqs (from prereq box in CpE flowchart):
+    ECE230, ECE250, ECE312, ECE332, ECE343, ECE380, CSSE332
+
+  EE ECE460 prereqs (from prereq box in EE flowchart):
+    ECE310, ECE320, ECE341, ECE351, ECE370, ECE380
+  ─────────────────────────────────────────────────────────────
+*/
+
+const EDGES = [
+// ── Math chain ──────────────────────────────────
+['MA111','MA112',['cpe','ee']],
+['MA112','MA113',['cpe','ee']],
+['MA112','MA221',['cpe','ee']],
+['MA221','MA222',['cpe','ee']],
+['MA113','MA381',['cpe','ee']],
+['MA112','MA374',['cpe']], 
+// ── Physics chain ───────────────────────────────
+['PH111','PH112',['cpe','ee']],
+['MA111','PH112',['cpe','ee']],
+['PH112','PH113',['cpe','ee']],
+['MA112','PH113',['cpe','ee']],
+// ── ECE203 DC Circuits ──────────────────────────
+['MA111','ECE203',['cpe','ee']],
+['PH112','ECE203',['cpe','ee']],
+// ── ECE204 AC Circuits ──────────────────────────
+['ECE203','ECE204',['cpe','ee']],
+['MA221','ECE204',['cpe','ee']],
+// ── ECE205 → ECE300 ─────────────────────────────
+['ECE203','ECE205',['cpe','ee']],
+['ECE180','ECE205',['cpe','ee']],
+['ECE205','ECE300',['cpe','ee']],
+['MA222','ECE300',['cpe','ee']], 
+// ── ECE180 Intro Signal Proc ─────────────────────
+['CSSE120','ECE180',['cpe','ee']],
+// ── ECE233 Intro Digital Sys ─────────────────────
+['CSSE120','ECE233',['cpe','ee']],
+// ── ECE230 Intro Embedded Sys ───────────────────
+['ECE233','ECE230',['cpe','ee']],
+['CSSE120','ECE230',['cpe','ee']],
+// ── ECE250 Electronic Dev Mod ───────────────────
+['ECE204','ECE250',['cpe','ee']], 
+// ── ECE380 DT Sigs & Systems ────────────────────
+// ── ECE362 Principles of Design ─────────────────
+// Verified: same 6 prereqs in both CpE and EE curricula
+['ECE204','ECE362',['cpe','ee']],
+['ECE205','ECE362',['cpe','ee']],
+['ECE230','ECE362',['cpe','ee']],
+['ECE233','ECE362',['cpe','ee']],
+['ECE250','ECE362',['cpe','ee']],
+['ECE300','ECE362',['cpe','ee']],
+['ECE362','ECE460',['cpe','ee']],
+// ── CS shared chain ─────────────────────────────
+['CSSE120','CSSE220',['cpe','ee']],
+// ── CpE-only courses ────────────────────────────
+['CSSE120','CSSE232',['cpe']],
+['ECE233','CSSE232',['cpe']],
+['CSSE232','ECE332', ['cpe']],
+['ECE233','ECE332', ['cpe']],
+['ECE332','ECE343', ['cpe']],
+['MA381','ECE312', ['cpe']],
+['CSSE120','ECE312', ['cpe']],
+['CSSE220','CSSE230',['cpe']],
+['MA112','CSSE230', ['cpe']],
+['CSSE232','CSSE332',['cpe']],
+['CSSE230','CSSE332',['cpe']],
+['ECE300','ECE320', ['cpe']], 
+['ECE230','ECE320', ['cpe']], 
+['ECE300','ECE380',[ 'cpe']], 
+['MA381','ECE380',[ 'cpe']], 
+// ── CpE ECE460 prereqs (from CpE flowchart) ─────
+['ECE230','ECE460', ['cpe']],
+['ECE250','ECE460', ['cpe']],
+['ECE312','ECE460', ['cpe']],
+['ECE332','ECE460', ['cpe']],
+['ECE343','ECE460', ['cpe']],
+['ECE380','ECE460', ['cpe']], 
+['CSSE332','ECE460', ['cpe']],
+// ── EE-only courses ─────────────────────────────
+['MA222','ECE340', ['ee']],
+['ECE204','ECE340', ['ee']],
+['ECE340','ECE341', ['ee']],
+['ECE250','ECE351', ['ee']],
+['ECE205','ECE351', ['ee']],
+['ECE380','ECE310', ['ee']],
+['ECE300','ECE320', ['ee']],
+['ECE230','ECE320', ['ee']],
+['ECE300','ECE380',['ee']],
+['MA381','ECE380',['ee']],
+['ECE204','ECE370', ['ee']], 
+['ECE204','ECE371', ['ee']], 
+// ── EE ECE460 prereqs (from EE flowchart) ───────
+['ECE310','ECE460', ['ee']],
+['ECE320','ECE460', ['ee']],
+['ECE341','ECE460', ['ee']],
+['ECE351','ECE460', ['ee']],
+['ECE370','ECE460', ['ee']], 
+['ECE380','ECE460', ['ee']],
+// ── Capstone chain (shared) ─────────────────────
+['ECE460','ECE461',['cpe','ee']],
+['ECE461','ECE462',['cpe','ee']],
+]; 
+
+/* ══════════════════════════════════════════
+   STATE
+══════════════════════════════════════════ */
+let major = 'both';
+let dark  = true;
+let muted = new Set();        // muted categories (only relevant in single-major mode)
+let zoomB = null;
+let initT = null;
+
+const cmap = {};
+COURSES.forEach(c => cmap[c.id] = c);
+
+/* ══════════════════════════════════════════
+   FILTER HELPERS
+══════════════════════════════════════════ */
+function getCourses(){
+  return COURSES.filter(c => major==='both' || c.m.includes(major));
+}
+function getEdges(cset){
+  return EDGES.filter(([s,t,ms]) =>
+    (major==='both' || ms.includes(major)) && cset.has(s) && cset.has(t)
+  );
+}
+
+/* ══════════════════════════════════════════
+   LAYOUT (longest-path levels + barycentric)
+══════════════════════════════════════════ */
+const NW=132, NH=52, HG=20, VG=72;
+const MAR={t:30, l:30, r:30, b:40};
+
+function layout(courses, edges){
+  const ids = new Set(courses.map(c=>c.id));
+  const ch={}, pa={};
+  courses.forEach(c=>{ ch[c.id]=[]; pa[c.id]=[]; });
+  edges.forEach(([s,t])=>{ if(ids.has(s)&&ids.has(t)){ch[s].push(t); pa[t].push(s);} });
+
+  // Kahn + longest path leveling
+  const lv={}, deg={};
+  courses.forEach(c=>{ lv[c.id]=0; deg[c.id]=pa[c.id].length; });
+  const q = courses.filter(c=>deg[c.id]===0).map(c=>c.id);
+  while(q.length){
+    const n=q.shift();
+    ch[n].forEach(c=>{ lv[c]=Math.max(lv[c],lv[n]+1); if(--deg[c]===0) q.push(c); });
+  }
+
+  const maxL = Math.max(...courses.map(c=>lv[c.id]));
+  const rows = Array.from({length:maxL+1}, ()=>[]);
+  courses.forEach(c=>rows[lv[c.id]].push(c.id));
+
+  // Barycentric crossing reduction (9 passes)
+  const pos={};
+  rows.forEach((r,i)=>r.forEach((id,j)=>pos[id]=j));
+  const avgP=id=>{ const pp=pa[id]; return pp.length?pp.reduce((s,p)=>s+pos[p],0)/pp.length:pos[id]; };
+  const avgC=id=>{ const cc=ch[id]; return cc.length?cc.reduce((s,c)=>s+pos[c],0)/cc.length:pos[id]; };
+  for(let p=0;p<9;p++){
+    rows.forEach((r,i)=>{ if(i>0){r.sort((a,b)=>avgP(a)-avgP(b)); r.forEach((id,j)=>pos[id]=j);} });
+    for(let i=maxL-1;i>=0;i--){ rows[i].sort((a,b)=>avgC(a)-avgC(b)); rows[i].forEach((id,j)=>pos[id]=j); }
+  }
+
+  const rw = r => r.length*NW + (r.length-1)*HG;
+  const W = Math.max(...rows.map(rw)) + MAR.l + MAR.r + 30;
+  const H = (maxL+1)*(NH+VG) + MAR.t + MAR.b;
+
+  const np={};
+  rows.forEach((r,li)=>{
+    const sx = (W - rw(r))/2;
+    r.forEach((id,j)=>{ np[id]={ x:sx+j*(NW+HG), y:MAR.t+li*(NH+VG) }; });
+  });
+  return {np, W, H, ch, pa};
+}
+
+/* ══════════════════════════════════════════
+   LEGEND
+══════════════════════════════════════════ */
+function updateLegend(){
+  const wrap = document.getElementById('legend-wrap');
+  wrap.innerHTML = '';
+
+  if(major === 'both'){
+    // Show major-color legend (informational, no click)
+    [['shared','#4ade80','Shared (CpE & EE)'],
+     ['ee',    '#60a5fa','EE Only'],
+     ['cpe',   '#fb923c','CpE Only']].forEach(([key,col,label])=>{
+      const d = document.createElement('div');
+      d.className = 'leg-static';
+      d.innerHTML = `<div class="leg-line" style="background:${col}"></div>${label}`;
+      wrap.appendChild(d);
+    });
+  } else {
+    // Show category legend with filter clicks
+    [['math','#22d3ee','Math'],
+     ['phys','#34d399','Physics'],
+     ['ece', '#fbbf24','ECE Core'],
+     ['cs',  '#a78bfa','CS/CSSE'],
+     ['design','#fb7185','Design']].forEach(([cat,col,label])=>{
+      const d = document.createElement('div');
+      d.className = 'leg' + (muted.has(cat)?' off':'');
+      d.dataset.cat = cat;
+      d.innerHTML = `<div class="leg-dot" style="background:${col}"></div>${label}`;
+      d.onclick = ()=>toggleCat(cat);
+      wrap.appendChild(d);
+    });
+  }
+}
+
+/* ══════════════════════════════════════════
+   RENDER
+══════════════════════════════════════════ */
+function render(preserve=false){
+  let savedT = null;
+  if(preserve && zoomB) savedT = d3.zoomTransform(document.getElementById('svg'));
+
+  const courses = getCourses();
+  const cset    = new Set(courses.map(c=>c.id));
+  const edges   = getEdges(cset);
+  const {np,W,H,ch,pa} = layout(courses,edges);
+
+  // Clear & resize SVG
+  const svgEl = document.getElementById('svg');
+  svgEl.innerHTML = '';
+
+  const sv = d3.select('#svg')
+    .attr('viewBox',`0 0 ${W} ${H}`)
+    .style('background', dark?'#050912':'#edf2f9');
+
+  // Defs: arrowhead markers
+  const defs = sv.append('defs');
+  // Category markers (for single-major mode highlight)
+  Object.entries(CAT_COL).forEach(([cat,col])=>{
+    defs.append('marker').attr('id',`ar-${cat}`)
+      .attr('viewBox','0 -4 8 8').attr('refX',7).attr('refY',0)
+      .attr('markerWidth',5).attr('markerHeight',5).attr('orient','auto')
+      .append('path').attr('d','M0,-4L8,0L0,4').attr('fill',col);
+  });
+  // Major markers (for both-mode highlight)
+  Object.entries(MAJ_COL).forEach(([key,col])=>{
+    defs.append('marker').attr('id',`ar-maj-${key}`)
+      .attr('viewBox','0 -4 8 8').attr('refX',7).attr('refY',0)
+      .attr('markerWidth',5).attr('markerHeight',5).attr('orient','auto')
+      .append('path').attr('d','M0,-4L8,0L0,4').attr('fill',col);
+  });
+  // Dim marker
+  defs.append('marker').attr('id','ar-dim')
+    .attr('viewBox','0 -4 8 8').attr('refX',7).attr('refY',0)
+    .attr('markerWidth',4).attr('markerHeight',4).attr('orient','auto')
+    .append('path').attr('d','M0,-4L8,0L0,4')
+    .attr('fill', dark?'rgba(80,140,220,.50)':'rgba(90,120,190,.48)');
+
+  // Zoom group
+  const g = sv.append('g');
+  zoomB = d3.zoom().scaleExtent([0.08,4])
+    .on('zoom', e=>g.attr('transform',e.transform));
+  sv.call(zoomB);
+
+  const sc = Math.min(window.innerWidth/W, (window.innerHeight-50)/H) * 0.86;
+  const tx = (window.innerWidth  - W*sc)/2;
+  const ty = (window.innerHeight - 50 - H*sc)/2;
+  initT = d3.zoomIdentity.translate(tx,ty).scale(sc);
+  sv.call(zoomB.transform, preserve&&savedT ? savedT : initT);
+
+  // ── Edges ──────────────────────────────────────
+  const bStroke = dark?'rgba(80,140,220,.42)':'rgba(90,120,190,.40)';
+
+  // In "both" mode edges are colored by major; in single mode they're dim base
+  const edgeBaseColor = e => {
+    if(major !== 'both') return bStroke;
+    const col = MAJ_COL[edgeMajKey(e[2])];
+    // semi-transparent version
+    return col + '55';
+  };
+
+  const eG = g.append('g');
+  const eSel = eG.selectAll('path').data(edges).join('path')
+    .attr('fill','none')
+    .attr('stroke', e => edgeBaseColor(e))
+    .attr('stroke-width', 1.8)
+    .attr('marker-end', e => {
+      if(major==='both') return `url(#ar-maj-${edgeMajKey(e[2])})`;
+      return 'url(#ar-dim)';
+    })
+    .attr('d', ([s,t]) => {
+      const p=np[s], q=np[t]; if(!p||!q) return '';
+      const x1=p.x+NW/2, y1=p.y+NH, x2=q.x+NW/2, y2=q.y, dy=y2-y1;
+      return `M${x1},${y1} C${x1},${y1+dy*.44} ${x2},${y2-dy*.44} ${x2},${y2}`;
+    });
+
+  // ── Nodes ─────────────────────────────────────
+  const nSel = g.append('g').selectAll('g').data(courses).join('g')
+    .attr('transform', d=>{ const p=np[d.id]; return p?`translate(${p.x},${p.y})`:'translate(-9999,-9999)'; })
+    .style('cursor','pointer');
+
+  // Determine node stroke/fill
+  const nodeStroke = d => major==='both' ? MAJ_COL[majKey(d.m)] : CAT_COL[d.cat];
+  const nodeFill   = d => major==='both' ? majBg(majKey(d.m),dark) : catBg(d.cat,dark);
+
+  nSel.append('rect')
+    .attr('width',NW).attr('height',NH).attr('rx',6).attr('ry',6)
+    .attr('fill',  d=>nodeFill(d))
+    .attr('stroke',d=>nodeStroke(d))
+    .attr('stroke-width', 2);
+
+  nSel.append('text')
+    .attr('x',NW/2).attr('y',28).attr('text-anchor','middle')
+    .attr('font-family','Open Sans,sans-serif').attr('font-size','20px').attr('font-weight','700')
+    .attr('fill',d=>nodeStroke(d)).attr('pointer-events','none')
+    .text(d=>d.id);
+
+  nSel.append('text')
+    .attr('x',NW/2).attr('y',44).attr('text-anchor','middle')
+    .attr('font-family','Open Sans,sans-serif').attr('font-size','8.5px')
+    .attr('fill',dark?'rgba(255,255,255,.58)':'rgba(20,40,80,.62)')
+    .attr('pointer-events','none')
+    .text(d=>d.name);
+
+  // Category visibility (single-major mode only)
+  function applyVis(){
+    if(major==='both'){ nSel.style('display',''); eSel.style('display',''); return; }
+    nSel.style('display',d=>muted.has(d.cat)?'none':'');
+    eSel.style('display',([s,t])=>
+      muted.has(cmap[s]?.cat)||muted.has(cmap[t]?.cat)?'none':'');
+  }
+  applyVis();
+
+  // ── Hover interactions ─────────────────────────
+  function ancestors(id){
+    const v=new Set(), q=[id];
+    while(q.length){ const c=q.shift(); (pa[c]||[]).forEach(p=>{if(!v.has(p)){v.add(p);q.push(p);}}); }
+    return v;
+  }
+  function descendants(id){
+    const v=new Set(), q=[id];
+    while(q.length){ const c=q.shift(); (ch[c]||[]).forEach(x=>{if(!v.has(x)){v.add(x);q.push(x);}}); }
+    return v;
+  }
+
+  nSel.on('mouseenter', function(_,d){
+    if(major!=='both' && muted.has(d.cat)) return;
+    const AN=ancestors(d.id), DE=descendants(d.id);
+    nSel.attr('opacity', n=>(n.id===d.id||AN.has(n.id)||DE.has(n.id)) ? 1 : .08);
+
+    eSel.attr('stroke', ([s,t,ms])=>{
+      const isA = (AN.has(s)||s===d.id) && (AN.has(t)||t===d.id);
+      const isD = (s===d.id||DE.has(s)) && DE.has(t);
+      if(isA||isD){
+        return major==='both' ? MAJ_COL[edgeMajKey(ms)] : CAT_COL[cmap[t]?.cat||'ece'];
+      }
+      return dark?'rgba(80,140,220,.03)':'rgba(90,120,190,.03)';
+    })
+    .attr('stroke-width', ([s,t])=>{
+      const isA=(AN.has(s)||s===d.id)&&(AN.has(t)||t===d.id);
+      const isD=(s===d.id||DE.has(s))&&DE.has(t);
+      return (isA||isD)?3:1.8;
+    })
+    .attr('marker-end', ([s,t,ms])=>{
+      const isA=(AN.has(s)||s===d.id)&&(AN.has(t)||t===d.id);
+      const isD=(s===d.id||DE.has(s))&&DE.has(t);
+      if(isA||isD){
+        return major==='both'
+          ? `url(#ar-maj-${edgeMajKey(ms)})`
+          : `url(#ar-${cmap[t]?.cat||'ece'})`;
+      }
+      return 'url(#ar-dim)';
+    });
+
+    // Info panel
+    document.getElementById('i-id').textContent    = d.id;
+    document.getElementById('i-id').style.color    = nodeStroke(d);
+    document.getElementById('i-name').textContent  = d.name;
+    document.getElementById('i-credits').textContent = `${d.cr} credit hours`;
+    document.getElementById('i-desc').textContent  = d.desc;
+
+    const bw = document.getElementById('i-badge-wrap');
+    bw.innerHTML = '';
+    if(major==='both'){
+      const mk = majKey(d.m);
+      if(mk !== 'shared'){
+        const bc = MAJ_COL[mk];
+        const sp = document.createElement('div');
+        sp.className='i-badge';
+        sp.textContent = (mk==='ee'?'EE':'CpE') + ' Only';
+        sp.style.cssText=`background:${bc}22;border:1px solid ${bc}66;color:${bc}`;
+        bw.appendChild(sp);
+      }
+    }
+
+    const pre = pa[d.id]||[];
+    const pw = document.getElementById('i-pre-wrap');
+    const pt = document.getElementById('i-prereqs');
+    pt.innerHTML='';
+    if(pre.length){
+      pw.style.display='block';
+      pre.forEach(pid=>{
+        const t=document.createElement('div'); t.className='i-tag'; t.textContent=pid;
+        const pc=cmap[pid]?.cat||'ece';
+        if(major==='both'){
+          const mk=majKey(cmap[pid]?.m||['cpe','ee']);
+          t.style.borderColor=MAJ_COL[mk]+'55'; t.style.color=MAJ_COL[mk];
+        } else {
+          t.style.borderColor=CAT_COL[pc]+'55'; t.style.color=CAT_COL[pc];
+        }
+        pt.appendChild(t);
+      });
+    } else { pw.style.display='none'; }
+
+    document.getElementById('info').classList.add('show');
+  })
+  .on('mouseleave', ()=>{
+    nSel.attr('opacity',1);
+    eSel.attr('stroke',e=>edgeBaseColor(e))
+        .attr('stroke-width',1.8)
+        .attr('marker-end',e=>major==='both'?`url(#ar-maj-${edgeMajKey(e[2])})`:'url(#ar-dim)');
+    applyVis();
+    document.getElementById('info').classList.remove('show');
+  });
+}
+
+/* ══════════════════════════════════════════
+   CONTROLS
+══════════════════════════════════════════ */
+function setMajor(m){
+  major=m;
+  document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('on',['both','cpe','ee'][i]===m));
+  if(m!=='both') muted.clear();  // reset category filters when switching to single mode
+  updateLegend();
+  render(false);
+}
+function toggleTheme(){
+  dark=!dark;
+  document.documentElement.setAttribute('data-theme',dark?'dark':'light');
+  document.getElementById('tbtn').textContent=dark?'🌙':'☀️';
+  updateLegend();
+  render(true);
+}
+function toggleCat(cat){
+  muted.has(cat)?muted.delete(cat):muted.add(cat);
+  document.querySelector(`.leg[data-cat="${cat}"]`)?.classList.toggle('off',muted.has(cat));
+  render(true);
+}
+function zoomBy(k){ if(zoomB) d3.select('#svg').transition().duration(250).call(zoomB.scaleBy,k); }
+function resetView(){ if(zoomB&&initT) d3.select('#svg').transition().duration(380).call(zoomB.transform,initT); }
+
+window.setMajor=setMajor; window.toggleTheme=toggleTheme;
+window.toggleCat=toggleCat; window.zoomBy=zoomBy; window.resetView=resetView;
+
+// ── Boot ──
+updateLegend();
+render();
+setTimeout(()=>{ const h=document.getElementById('hint'); if(h)h.style.opacity='0'; }, 3800);
+</script>
+</body>
+</html>
